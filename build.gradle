@@ -1,0 +1,16 @@
+group 'new-nio-butler'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile("com.fasterxml.jackson.core:jackson-databind:2.7.4")
+    compile ("org.zeromq:jeromq:0.3.5")
+    testCompile("junit:junit:4.12")
+}
