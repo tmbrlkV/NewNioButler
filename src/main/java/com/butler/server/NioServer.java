@@ -71,7 +71,9 @@ public class NioServer implements Runnable {
                         switch (change.getType()) {
                             case ChangeRequest.CHANGER:
                                 SelectionKey key = change.getSocket().keyFor(selector);
-                                key.interestOps(change.getOps());
+                                if (key != null) {
+                                    key.interestOps(change.getOps());
+                                }
                         }
                     }
                     pendingChanges.clear();
@@ -123,6 +125,7 @@ public class NioServer implements Runnable {
         }
 
         if (numRead == -1) {
+            System.out.println("remove close");
             receiver.removeClient((SocketChannel) key.channel());
             key.channel().close();
             key.cancel();

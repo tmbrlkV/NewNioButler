@@ -19,6 +19,13 @@ class TimeoutManager implements Runnable {
     private final int threadCheckDelay;
     private static long timeout;
 
+    private Consumer<SocketChannel> handler = channel -> {
+        if (Duration.between(channels.get(channel), Instant.now()).getSeconds() > timeout) {
+            removeHandle(channel);
+            receiverSocketHandler.removeClient(channel);
+        }
+    };
+
     TimeoutManager(ReceiverSocketHandler receiverSocketHandler) {
         this.receiverSocketHandler = receiverSocketHandler;
         Properties properties = ConnectionProperties.getProperties();
@@ -38,12 +45,7 @@ class TimeoutManager implements Runnable {
             if (channels.isEmpty()) {
                 continue;
             }
-            Consumer<SocketChannel> handler = channel -> {
-                if (Duration.between(channels.get(channel), Instant.now()).getSeconds() > timeout) {
-                    removeHandle(channel);
-                    receiverSocketHandler.removeClient(channel);
-                }
-            };
+
             if (channels.size() > threshold) {
                 channels.keySet().parallelStream().forEach(handler);
             } else {

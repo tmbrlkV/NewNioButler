@@ -13,7 +13,7 @@ public class ServerDataEvent {
         this.data = data;
     }
 
-    public NioServer getServer() {
+    NioServer getServer() {
         return server;
     }
 

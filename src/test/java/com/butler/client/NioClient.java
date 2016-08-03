@@ -25,13 +25,13 @@ public class NioClient implements Runnable {
     private final Map<SocketChannel, List<ByteBuffer>> pendingData = new HashMap<>();
     private Map<SocketChannel, ResponseHandler> responseHandlers = Collections.synchronizedMap(new HashMap<>());
 
-    private NioClient(InetAddress hostAddress, int port) throws IOException {
+    NioClient(InetAddress hostAddress, int port) throws IOException {
         this.hostAddress = hostAddress;
         this.port = port;
         this.selector = this.initSelector();
     }
 
-    private void send(byte[] data, ResponseHandler handler) throws IOException {
+    void send(byte[] data, ResponseHandler handler) throws IOException {
         SocketChannel socket = initiateConnection();
 
         responseHandlers.put(socket, handler);
@@ -177,7 +177,7 @@ public class NioClient implements Runnable {
             t.setDaemon(true);
             t.start();
             ResponseHandler handler = new ResponseHandler();
-            String jsonString = JsonObjectFactory.getJsonString("getUserByLoginPassword", new User("kek", "kek"));
+            String jsonString = JsonObjectFactory.getJsonString("getUserByLoginPassword", new User("user", "user"));
             client.send(jsonString.getBytes(), handler);
             String reply = handler.waitForResponse();
             User user = JsonObjectFactory.getObjectFromJson(reply, User.class);
