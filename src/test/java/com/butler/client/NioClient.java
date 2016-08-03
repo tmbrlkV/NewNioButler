@@ -1,6 +1,7 @@
 package com.butler.client;
 
 import com.butler.server.ChangeRequest;
+import com.butler.socket.ConnectionProperties;
 import com.butler.util.entity.User;
 import com.butler.util.json.JsonMessage;
 import com.butler.util.json.JsonObjectFactory;
@@ -168,7 +169,10 @@ public class NioClient implements Runnable {
 
     public static void main(String[] args) {
         try {
-            NioClient client = new NioClient(InetAddress.getByName("127.0.0.1"), 13000);
+            Properties properties = ConnectionProperties.getProperties();
+            String host = properties.getProperty("butler_address");
+            int port = Integer.parseInt(properties.getProperty("butler_port"));
+            NioClient client = new NioClient(InetAddress.getByName(host), port);
             Thread t = new Thread(client);
             t.setDaemon(true);
             t.start();

@@ -14,12 +14,12 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandManager {
-    private ZMQ.Context context = ZMQ.context(1);
-    private SenderSocketHandler sender = new SenderSocketHandler(context);
+    private SenderSocketHandler sender = new SenderSocketHandler();
+    private String DEFAULT_REPLY = "";
 
     private Map<String, Command> commandMap = new ConcurrentHashMap<String, Command>() {{
         Command databaseCommand = request -> {
-            try (DatabaseSocketHandler handler = new DatabaseSocketHandler(context)) {
+            try (DatabaseSocketHandler handler = new DatabaseSocketHandler()) {
                 handler.send(request);
                 String reply = handler.receive();
                 User user = JsonObjectFactory.getObjectFromJson(reply, User.class);
@@ -27,14 +27,14 @@ public class CommandManager {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return "";
+            return DEFAULT_REPLY;
         };
         put(Command.GET_USER_BY_LOGIN_PASSWORD, databaseCommand);
         put(Command.GET_USER_BY_LOGIN, databaseCommand);
         put(Command.NEW_USER, databaseCommand);
         put(Command.MESSAGE, request -> {
             sender.send(request);
-            return request;
+            return DEFAULT_REPLY;
         });
     }};
 

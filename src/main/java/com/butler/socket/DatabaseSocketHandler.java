@@ -5,9 +5,9 @@ import org.zeromq.ZMQ;
 public class DatabaseSocketHandler implements AutoCloseable {
     private ZMQ.Socket requester;
 
-    public DatabaseSocketHandler(ZMQ.Context context) {
-        requester = context.socket(ZMQ.REQ);
-        requester.connect("tcp://10.66.161.2:11000");
+    public DatabaseSocketHandler() {
+        requester = ZmqContextHolder.getContext().socket(ZMQ.REQ);
+        requester.connect(ConnectionProperties.getProperties().getProperty("database_address"));
     }
 
     public void send(String message) {

@@ -5,9 +5,9 @@ import org.zeromq.ZMQ;
 public class SenderSocketHandler implements AutoCloseable {
     private ZMQ.Socket sender;
 
-    public SenderSocketHandler(ZMQ.Context context) {
-        sender = context.socket(ZMQ.PUSH);
-        sender.connect("tcp://10.66.161.2:10001");
+    public SenderSocketHandler() {
+        sender = ZmqContextHolder.getContext().socket(ZMQ.PUSH);
+        sender.connect(ConnectionProperties.getProperties().getProperty("chat_sender_address"));
     }
 
     public void send(String message) {

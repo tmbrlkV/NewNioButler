@@ -1,5 +1,8 @@
 package com.butler.server;
 
+import com.butler.socket.ConnectionProperties;
+import com.butler.socket.ReceiverSocketHandler;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -22,17 +25,29 @@ public class NioServer implements Runnable {
 
     private final Map<SocketChannel, List<ByteBuffer>> pendingData = new HashMap<>();
 
+    private ReceiverSocketHandler receiver;
+    private final Thread receiverThread;
+
+    private TimeoutManager timeoutManager;
+    private final Thread timeoutManagerThread;
+
     private NioServer(InetAddress hostAddress, int port, Worker worker) throws IOException {
         this.hostAddress = hostAddress;
         this.port = port;
         selector = initSelector();
         this.worker = worker;
+        receiver =  new ReceiverSocketHandler(this);
+        receiverThread = new Thread(receiver);
+        receiverThread.start();
+        timeoutManager = new TimeoutManager(receiver);
+        timeoutManagerThread = new Thread(timeoutManager);
+        timeoutManagerThread.start();
     }
 
-    public void send(SocketChannel socket, byte[] data) {
+    public void send(SocketChannel channel, byte[] data) {
         synchronized (pendingChanges) {
-            pendingChanges.add(new ChangeRequest(socket, ChangeRequest.CHANGER, SelectionKey.OP_WRITE));
-            queueWrite(socket, data);
+            pendingChanges.add(new ChangeRequest(channel, ChangeRequest.CHANGER, SelectionKey.OP_WRITE));
+            queueWrite(channel, data);
         }
         selector.wakeup();
     }
@@ -80,6 +95,8 @@ public class NioServer implements Runnable {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                receiverThread.interrupt();
+                timeoutManagerThread.interrupt();
             }
         }
     }
@@ -88,6 +105,7 @@ public class NioServer implements Runnable {
         ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
         SocketChannel socketChannel = serverSocketChannel.accept();
         socketChannel.configureBlocking(false);
+        receiver.addClient(socketChannel);
         socketChannel.register(selector, SelectionKey.OP_READ);
     }
 
@@ -99,17 +117,19 @@ public class NioServer implements Runnable {
             numRead = socketChannel.read(readBuffer);
         } catch (IOException e) {
             key.cancel();
+            receiver.removeClient((SocketChannel) key.channel());
             socketChannel.close();
             return;
         }
 
         if (numRead == -1) {
+            receiver.removeClient((SocketChannel) key.channel());
             key.channel().close();
             key.cancel();
             return;
         }
-
         worker.processData(this, socketChannel, readBuffer.array(), numRead);
+        timeoutManager.addHandle(socketChannel);
     }
 
     private void write(SelectionKey key) throws IOException {
@@ -147,7 +167,11 @@ public class NioServer implements Runnable {
         try {
             Worker worker = new Worker();
             new Thread(worker).start();
-            new Thread(new NioServer(null, 13000, worker)).start();
+            Properties properties = ConnectionProperties.getProperties();
+            int port = Integer.parseInt(properties.getProperty("butler_port"));
+            String host = properties.getProperty("butler_address");
+            InetAddress address = InetAddress.getByName(host);
+            new Thread(new NioServer(address, port, worker)).start();
         } catch (IOException e) {
             e.printStackTrace();
         }
