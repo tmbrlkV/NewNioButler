@@ -192,6 +192,8 @@ public class NioEchoClient implements Runnable {
                 try (Scanner scanner = new Scanner(System.in)) {
                     while (!Thread.currentThread().isInterrupted()) {
                         JsonMessage message = new JsonMessage("message", user.getLogin(), scanner.nextLine());
+                        message.setFrom(user.getId());
+                        message.setTo(0);
                         String toSend = JsonObjectFactory.getJsonString(message);
                         client.send(toSend.getBytes(), handler);
                         String response = handler.waitForResponse();
