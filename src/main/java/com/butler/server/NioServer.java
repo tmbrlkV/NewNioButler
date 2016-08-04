@@ -36,7 +36,7 @@ public class NioServer implements Runnable {
         this.port = port;
         selector = initSelector();
         this.worker = worker;
-        receiver =  new ReceiverSocketHandler(this);
+        receiver = new ReceiverSocketHandler(this);
         receiverThread = new Thread(receiver);
         receiverThread.start();
         timeoutManager = new TimeoutManager(receiver);
@@ -71,7 +71,7 @@ public class NioServer implements Runnable {
                         switch (change.getType()) {
                             case ChangeRequest.CHANGER:
                                 SelectionKey key = change.getSocket().keyFor(selector);
-                                if (key != null) {
+                                if (key != null && key.isValid()) {
                                     key.interestOps(change.getOps());
                                 }
                         }
@@ -125,7 +125,6 @@ public class NioServer implements Runnable {
         }
 
         if (numRead == -1) {
-            System.out.println("remove close");
             receiver.removeClient((SocketChannel) key.channel());
             key.channel().close();
             key.cancel();
@@ -142,7 +141,12 @@ public class NioServer implements Runnable {
             List<ByteBuffer> queue = pendingData.get(socketChannel);
             while (!queue.isEmpty()) {
                 ByteBuffer buf = queue.get(0);
-                socketChannel.write(buf);
+                try {
+                    socketChannel.write(buf);
+                } catch (IOException e) {
+                    key.channel().close();
+                    key.channel();
+                }
                 if (buf.remaining() > 0) {
                     break;
                 }

@@ -16,7 +16,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 
-public class NioClient implements Runnable {
+public class NioEchoClient implements Runnable {
     private InetAddress hostAddress;
     private int port;
     private Selector selector;
@@ -24,8 +24,9 @@ public class NioClient implements Runnable {
     private final List<ChangeRequest> pendingChanges = new LinkedList<>();
     private final Map<SocketChannel, List<ByteBuffer>> pendingData = new HashMap<>();
     private Map<SocketChannel, ResponseHandler> responseHandlers = Collections.synchronizedMap(new HashMap<>());
+    private SocketChannel socketChannel;
 
-    NioClient(InetAddress hostAddress, int port) throws IOException {
+    NioEchoClient(InetAddress hostAddress, int port) throws IOException {
         this.hostAddress = hostAddress;
         this.port = port;
         this.selector = this.initSelector();
@@ -116,7 +117,6 @@ public class NioClient implements Runnable {
         System.arraycopy(data, 0, rspData, 0, numRead);
         ResponseHandler handler = responseHandlers.get(socketChannel);
         if (handler.handleResponse(rspData)) {
-            socketChannel.close();
             socketChannel.keyFor(this.selector).cancel();
         }
     }
@@ -154,11 +154,17 @@ public class NioClient implements Runnable {
     }
 
     private SocketChannel initiateConnection() throws IOException {
-        SocketChannel socketChannel = SocketChannel.open();
-        socketChannel.configureBlocking(false);
-        socketChannel.connect(new InetSocketAddress(this.hostAddress, this.port));
-        synchronized (this.pendingChanges) {
-            this.pendingChanges.add(new ChangeRequest(socketChannel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
+        if (socketChannel == null) {
+            socketChannel = SocketChannel.open();
+            socketChannel.configureBlocking(false);
+            socketChannel.connect(new InetSocketAddress(this.hostAddress, this.port));
+            synchronized (this.pendingChanges) {
+                this.pendingChanges.add(new ChangeRequest(socketChannel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
+            }
+        } else {
+            synchronized (this.pendingChanges) {
+                this.pendingChanges.add(new ChangeRequest(socketChannel, ChangeRequest.REGISTER, SelectionKey.OP_WRITE));
+            }
         }
         return socketChannel;
     }
@@ -172,7 +178,7 @@ public class NioClient implements Runnable {
             Properties properties = ConnectionProperties.getProperties();
             String host = properties.getProperty("butler_address");
             int port = Integer.parseInt(properties.getProperty("butler_port"));
-            NioClient client = new NioClient(InetAddress.getByName(host), port);
+            NioEchoClient client = new NioEchoClient(InetAddress.getByName(host), port);
             Thread t = new Thread(client);
             t.setDaemon(true);
             t.start();

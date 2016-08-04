@@ -25,7 +25,7 @@ public class HardTimes {
             CompletableFuture.supplyAsync(() -> {
                 try {
                     counter[0]++;
-                    NioClient client = new NioClient(InetAddress.getByName(host), port);
+                    NioEchoClient client = new NioEchoClient(InetAddress.getByName(host), port);
                     Thread clientThread = new Thread(client);
                     clientThread.setDaemon(true);
                     clientThread.start();

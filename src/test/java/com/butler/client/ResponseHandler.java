@@ -16,7 +16,6 @@ class ResponseHandler {
             } catch (InterruptedException ignored) {
             }
         }
-
         String reply = new String(this.rsp);
         rsp = null;
         return reply;

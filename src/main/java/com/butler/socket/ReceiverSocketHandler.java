@@ -47,11 +47,9 @@ public class ReceiverSocketHandler implements Runnable {
             if (events > 0) {
                 String reply = receiver.recvStr();
                 Consumer<SocketChannel> handler =  channel -> {
-                    System.out.println(channel + " " + reply + " KEK ");
-                    server.send(channel, reply.getBytes());
+                    server.send(channel, (reply + "\n").getBytes());
                 };
 
-                System.out.println(clients.size());
                 if (clients.size() > CUTOFF) {
                     clients.parallelStream().forEach(handler);
                 } else {
